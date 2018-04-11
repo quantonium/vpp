@@ -1,0 +1,300 @@
+VPP Installation, build, and test
+
+Prerequisites
+=============
+
+The Quantonium ILA user space code must be install before VPP. This
+is in github.com/quantonium/ila. See
+https://github.com/quantonium/ila/blob/master/README
+
+The ILA code is normally installed in /home/<user>/quantonium.
+(ie. ~/quantonium). If the installation directory is different please
+adjust these instructions accordingly.
+
+Installation
+============
+
+Code is installed into /home/<user>/quantonium/vpp.
+
+	mkdir ~/quantonium/gw
+	cd ~/quantonium/gw
+
+	git clone https://github.com/quantonium/vpp.git
+
+	cd vpp
+	git checkout feature/gtp-up
+
+	sudo groupadd vpp
+
+Build
+=====
+
+To build VPP code:
+
+	cd ~/quantonium/gw/vpp
+
+	make install-dep
+	make build
+
+Note that 'make install-dep' should only be needed to be done once.
+
+Running
+=======
+
+There are two VPP configuration files: init.conf and startup.conf.
+
+init.conf contains a list of VPP CLI instructions to set up VPP.
+
+The startup.conf configuration file includes the path to the VPP plugins
+and other parameters. Information about general VPP parameters can be found
+in VPP documentation.
+
+The startup.conf also includes a section for ILA parameters. This needs
+to be edited to setup up the local configuration. The parameter block is
+indicated by gtpila and has the format:
+
+gtpila {
+    loc_id <local locator ID>
+    db_parms { host=<DB host>,port=<DB port, default 6380> }
+    test_addr = <ILA SIR address> /* Optional, repeat as desired */
+}
+
+loc_id specifies the ID of the local ILA-N device. This should
+match the information in the ILA locator database.
+
+db_parms provides that address and port of the identifier database for
+ILA. That database is run in the ILA-M and VPP connects to it in order
+to write entries.
+
+test_addr is used for standalone testing of the VPP to ILA DB interface.
+This specifies a SIR address to be written to the ILA identifier DB
+at initialization. This parameter is optional and can be repeated multiple 
+to set up different addresses.
+
+Once startup.conf is edited run the VPP GW by:
+
+	cd ~/quantonium/gw/vpp
+
+	./run.sh
+
+This should start the VPP shell and print the VPP banner.
+
+Testing VPP to ILA interface
+============================
+
+As mentioned in the Running section above, the VPP to ILA interface can
+be tested independently of GTP-C operation. This verifies that ILA for GTP
+is configured and operating properly.
+
+Test parameters
+---------------
+
+This test assumes two hosts are used. One serves as an ILA-R with a
+co-located ILA-M (an ILA-M/R), and the other runs the ILA-N. Configuration
+for the test includes a SIR prefix, locator of the ILA-N, a locator ID for
+the for the ILA-N, network interface of the each host locator address of the
+ILA, the address of the ILA-N host that will serve as the via address for ILA
+mappings, and some number of SIR address that are configured on the ILA-N
+to emulate end hosts. There is also a port number for the identifier DB, we
+assume that the default port number of 6380 is used.
+
+For the test configuration the following should be usable independent of
+the particular host and network configuration.
+
+	SIR prefix = 2222:0:0:0
+	Locator = 8888:0:0:113
+	Locator ID = 113
+	Locator address = 8888:0:0:113::113
+	SIR addresses are 2222::10, 2222::11
+
+The following values must be set per your configuration. Shown values are
+taken from one setup.
+
+	Address of ILA-M/R = fd00:4888:2000:2062::103 
+	Address of ILA-N = fd00:4888:2000:2062::113 
+	Interface on both hosts = ens4
+
+Configuring startup.conf
+------------------------
+
+The gtpila section in ~/quantonium/gw/vpp/startup.conf needs to be configured.
+For the parameter values describe above this would be the block:
+
+	gtpila {
+	  loc_id 123
+	  db_parms { host=fd00:4888:2000:2062::103,port=6380 }
+	  test_addr 2222::10
+	  test_addr 2222::11
+	}
+
+Note that the db_parms host address would need to the be actual address of the
+ILA-M/R in the particular setup.
+
+Running the test
+----------------
+
+There are three step to starting the test.
+
+  1) Start the the ILA-M and ILA-R
+  2) Start the ILA-N
+  3) Start the VPP
+
+Note that ILA commands expect QDIR to be set. This is normally done by:
+
+export QDIR=/home/<user>/quantonium/install
+
+Starting the ILA-M and ILA-R
+----------------------------
+
+Execute this from the host for ILA-M/R:
+
+	cd ~/quantonium/ila/src/ila/test
+
+	./test_setup-R fd00:4888:2000:2062::113 8888:0:0:113 113 ens4
+
+Replace the address (that of the ILA-N) with the one needed to the setup.
+Change the interface (ens4) as appropriate also.
+
+The output from this should look something like this:
+
+tom2@quantonium-1:~/quantonium/ila/src/ila/test$ ./test_setup-R fd00:4888:2000:2062::113 8888:0:0:113 113 ens4
+[sudo] password for tom2: 
+rmmod: ERROR: Module ila is in use
+redis-server: no process found
+ilactld: no process found
+7153:C 11 Apr 18:32:51.137 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+7153:C 11 Apr 18:32:51.137 # Redis version=4.0.6, bits=64, commit=c9cb699b, modified=0, pid=7153, just started
+7153:C 11 Apr 18:32:51.137 # Configuration loaded
+7155:C 11 Apr 18:32:51.140 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+7155:C 11 Apr 18:32:51.140 # Redis version=4.0.6, bits=64, commit=c9cb699b, modified=0, pid=7155, just started
+7155:C 11 Apr 18:32:51.140 # Configuration loaded
+7160:C 11 Apr 18:32:51.143 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+7160:C 11 Apr 18:32:51.143 # Redis version=4.0.6, bits=64, commit=c9cb699b, modified=0, pid=7160, just started
+7160:C 11 Apr 18:32:51.144 # Configuration loaded
+ilad: no process found
+rmmod: ERROR: Module ila is in use
+Host ::1 port 6379
+
+The rmmod errors are innocuous and so is the "no process found". The bulk
+of this output is from starting the three redis databases. It is
+important that these start without errors.
+
+At this point there should be one entry in the loc DB. This can be checked
+by:
+
+tom2@quantonium-1:~/quantonium/ila/src/ila/test$ $QDIR/bin/ilac loc list
+113 8888:0:0:113
+
+Starting the ILA-N
+------------------
+
+To start the ILA-N, execute this from the host for ILA-N:
+
+	cd ~/quantonium/ila/src/ila/test
+
+	./test_setup-N 2222:0:0:0 8888:0:0:113 8888:0:0:113::113 ens4 \
+		2222::10 2222::11
+
+
+Output from this command should look something like this:
+
+tom2@quantonium-2:~/quantonium/ila/src/ila/test$ ./test_setup-N 2222:0:0:0 8888:0:0:113 8888:0:0:113::113 ens4 2222::10 2222::11
+[sudo] password for tom2: 
+rmmod: ERROR: Module ila is not currently loaded
+rmmod: ERROR: Module ila is not currently loaded
+2222::10
+2222::11
+
+The rmmod errors are innocuous.
+
+This command should set a SIR to ILA translation. This can be verified by:
+
+tom2@quantonium-2:~/quantonium/ila/src/ila/test$ $QDIR/sbin/ip ila list
+8888:0:0:113        2222:0:0:0          *               neutral-map-autoluid
+
+The SIR addresses should also be configured on the respective interfaces,
+this can be verified using ifconfig.
+
+Starting the VPP
+----------------
+
+start.conf must be configured as described above. From the ILA-N host
+do:
+
+	cd ~/quantonium/gw/vpp
+
+	./run.sh
+
+The tail of the output from this command should look something like this:
+
+"
+gtp_ila_config:334: gtpila: Got parameter loc_id 123
+gtp_ila_config:337: gtpila: Got paramter db_parms  host=fd00:4888:2000:2062::103,port=6380 
+gtp_ila_config:340: gtpila: Got paramter test_addr 2222::10
+gtp_ila_config:340: gtpila: Got paramter test_addr 2222::11
+start_db:113: gtpila: Started DB ident
+    _______    _        _   _____  ___ 
+ __/ __/ _ \  (_)__    | | / / _ \/ _ \
+ _/ _// // / / / _ \   | |/ / ___/ ___/
+ /_/ /____(_)_/\___/   |___/_/  /_/    
+
+DBGvpp# create host-interface: Invalid interface name
+"
+
+The "create host-interface: Invalid interface name" is innocuous. This is
+from the init.conf script which is not relevant to this test (that will
+need to be set correctly for the full GTP-C path).
+
+The important thing to note is whether there are an errors from gtpila. The
+most common error would be that it's unable to connect to the identifier
+database.
+
+Checking databases and forwarding entries
+-----------------------------------------
+
+At this point VPP should have written into the identifier database and
+the ILA-M should have seen this and populated the ILA map database. In
+turn the ILA-R should see that and set the ILA forwarding entries in the
+kernel.
+
+To verify this, go back to the ILA-M/R host.
+
+The identifier database can be inspected:
+
+tom2@quantonium-1:~/quantonium$ $QDIR/bin/ilac ident list
+17 2222::11 123
+16 2222::10 123
+
+The map database can similarly be viewed:
+
+tom2@quantonium-1:~/quantonium/ila/src/ila/test$ $QDIR/bin/ilac map list
+2222::11 8888:0:0:113 * neutral-map-auto luid output
+2222::10 8888:0:0:113 * neutral-map-auto luid output
+
+The routing table should contain ILA routes for the SIR addresses:
+
+tom2@quantonium-1:~/quantonium/ila/src/ila/test$ $QDIR/sbin/ip -6 route get 2222::10
+2222::10 from ::  encap ila  8888:0:0:113  csum-mode neutral-map-auto  ident-type luid  hook-type output via fd00:4888:2000:2062::113 dev ens4 proto 18 src fd00:4888:2000:2062::103 metric 1024 pref medium
+
+Running traffic
+---------------
+
+To test communications are working go to the ILA-M/R host and ping
+a SIR address.
+
+tom2@quantonium-1:~/quantonium/ila/src/ila/test$ ping6 2222::10
+PING 2222::10(2222::10) 56 data bytes
+64 bytes from 2222::10: icmp_seq=1 ttl=64 time=1.04 ms
+64 bytes from 2222::10: icmp_seq=2 ttl=64 time=0.405 ms
+
+If ping was successful, verify that traffic is ILA this can be done
+by tcpdump in the interface. The ICMP echo request should have a
+destination that is a SIR address. For example, you should see something
+like this:
+
+9:14:29.972903 IP6 fd00:4888:2000:2062::103 > 8888:0:0:113::9896: ICMP6, echo request, seq 6, length 64
+
+Note that the destination is indeed an ILA address where the locator is
+8888:0:0:113. Also, note that the identifier has been transformed by
+checksum neutral mapping.
+
