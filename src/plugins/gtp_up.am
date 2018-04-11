@@ -29,9 +29,16 @@ if WITH_ISA_L_CRYPTO_LIB
 gtpup_plugin_la_LDFLAGS += -Wl,--exclude-libs,libisal_crypto.a,-l:libisal_crypto.a
 endif
 
+gtpup_top_qdir = ${top_srcdir}/../../..
+gtpup_qdir = ${gtpup_top_qdir}/install
+
 gtpup_plugin_la_CFLAGS = $(AM_CFLAGS)
+gtpup_plugin_la_CFLAGS += -I${gtpup_top_qdir}/ila/src/include/
 gtpup_plugin_la_LDFLAGS += -Wl,-lnuma
 gtpup_plugin_la_LDFLAGS += -Wl,-lm,-ldl
+gtpup_plugin_la_LDFLAGS += -L${gtpup_qdir}/lib/
+gtpup_plugin_la_LDFLAGS += -liputil -lqutil -lhiredis -lnetlink -lmnl
+
 gtpup_plugin_la_LIBADD =
 
 gtpup_plugin_la_SOURCES = \
@@ -52,7 +59,8 @@ gtpup_plugin_la_SOURCES = \
   gtp-up/gtp_up_all_api_h.h \
   gtp-up/gtp_up_msg_enum.h \
   gtp-up/gtp_up_sx.h \
-  gtp-up/gtp_up_sx_api.h
+  gtp-up/gtp_up_sx_api.h \
+  gtp-up/gtp_ila_if.c
 
 API_FILES += gtp-up/gtp_up.api
 

@@ -39,6 +39,7 @@
 #include "gtp_up.h"
 #include "gtp_up_sx.h"
 #include "gtp_up_sx_api.h"
+#include "gtp_ila_if.h"
 
 gtp_up_main_t gtp_up_main;
 
@@ -1634,6 +1635,7 @@ static int build_sx_sdf(gtp_up_session_t *sx)
 	if (pdr->pdi.teid.flags & F_TEID_V4)
 	  rules_add_v4_teid(pending, &pdr->pdi.teid.ip4, pdr->pdi.teid.teid);
 
+	/* Code to set up GTP to PGW? If so need to disable for ILA */
 	if (pdr->pdi.teid.flags & F_TEID_V6)
 	  rules_add_v6_teid(pending, &pdr->pdi.teid.ip6, pdr->pdi.teid.teid);
       }
@@ -1761,6 +1763,8 @@ int sx_update_apply(gtp_up_session_t *sx)
 
   if (pending_pdr)
     {
+      gtp_up_pdr_t *pdr;
+
       sx->flags |= SX_UPDATING;
 
       /* make sure all processing nodes see the update op */
@@ -1773,6 +1777,22 @@ int sx_update_apply(gtp_up_session_t *sx)
       vec_diff(pending->v6_teid, active->v6_teid, v6_teid_cmp, sx_add_del_v6_teid, sx);
 
       // TODO: add SDF rules to global table
+
+      vec_foreach (pdr, pending->pdr)
+        {
+          if (pending->flags & SX_SDF_IPV6) {
+            /* Set up ILA here. This may or may not be exactly the right place,
+             * but it's start
+             */
+
+            if (gtp_ila_create_ident(&pdr->pdi.ue_addr) < 0) {
+              /* Create failed, we should really delete an identifiers that
+               * we're already created
+               */
+              return -1;
+            }
+          }
+        }
     }
 
   /* flip the switch */
