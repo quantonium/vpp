@@ -30,6 +30,8 @@
 #ifndef __GTP_ILA_H__
 #define __GTP_ILA_H__
 
+#include <linux/types.h>
+
 #include "pfcp.h"
 
 int gtp_ila_create_ident(pfcp_ue_ip_address_t *ue_ip_address);
