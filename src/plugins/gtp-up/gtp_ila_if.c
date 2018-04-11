@@ -59,8 +59,9 @@
 #include "ila.h"
 #include "linux/ila.h"
 #include "qutils.h"
-#include "ila.h"
 #include "ila_low.h"
+
+#define ntohll(x) ((((__u64)ntohl(x)) << 32) + ntohl((x) >> 32))
 
 /* Instance of control mapping system. There is one databases
  * used, reference by db_*_ctx. This uses the ident (ILA
@@ -75,8 +76,10 @@ struct ila_ctl_sys {
 /* Global context for interacting with identifier DB */
 struct ila_ctl_sys ics;
 
+/* Defaults for indentifier database, can be overridden by configuration */
 #define ILA_REDIS_DEFAULT_PORT 6380
 #define ILA_REDIS_DEFAULT_HOST "::1"
+
 #define ILA_DBNAME "ident"
 
 /* Start identifier database */
@@ -155,24 +158,35 @@ static int remove_entry(struct ila_ctl_sys *ics, __u64 inum)
 static int test_write(struct ila_ctl_sys *ics, const char *paddr)
 {
 	struct in6_addr in6addr;
+	struct ila_addr *iaddr;
+	__u64 inum;
 	int res;
 
 	inet_pton(AF_INET6, paddr, &in6addr);
 
-	res = set_entry(ics, 212, &in6addr, ics->loc_id);
+	iaddr = (struct ila_addr *)&in6addr;
+
+	/* Identifier index is just the identifier of the address. This is
+	 * sufficient for now since we assume all ILA addresses are 64/64
+	 * split and there is only on SIR address. Will need to be more
+	 * clever in the future.
+	 */
+	inum = ntohll(iaddr->ident.v64);
+
+	res = set_entry(ics, inum, &iaddr->addr, ics->loc_id);
 	if (res < 0)
 		clib_warning("gtpila: Set ident entry %uul %s to %ull failed",
-			     211, paddr, ics->loc_id);
+			     inum, paddr, ics->loc_id);
 
 	return res;
 }
 
 /* gtp_ila_create_ident
  *
- * Called to from session establishment or update
+ * Called to from GTP-C session establishment or update
  *
  * Returns:
- *  0 - Not ILA. Maybe this is an IPv4 address?
+ *  0 - Not for ILA. Maybe this is an IPv4 address?
  *  1 - ILA address and we successfully created an entry for it
  *  -1 - Looks like it;s and ILA address, but error in setting entry
  */
@@ -189,11 +203,11 @@ int gtp_ila_create_ident(pfcp_ue_ip_address_t *ue_ip_address)
 	}
 
 	/* Okay, it's an IPv6 address. In the future we have more checks
-	 * here, but for now let's assume that this supposed to be and
+	 * here, but for now let's assume that this supposed to be an
 	 * ILA address.
 	 */
 
-	/* ip6 has type ip6_address_t */
+	/* ip6 has type ip6_address_t so this should be okay */
 	iaddr = (struct ila_addr *)&ue_ip_address->ip6;
 
 	/* Identifier index is just the identifier of the address. This is
@@ -201,7 +215,7 @@ int gtp_ila_create_ident(pfcp_ue_ip_address_t *ue_ip_address)
 	 * split and there is only on SIR address. Will need to be more
 	 * clever in the future.
 	 */
-	inum = iaddr->ident.v64;
+	inum = ntohll(iaddr->ident.v64);
 
 	res = set_entry(&ics, inum, &iaddr->addr, ics.loc_id);
 	if (res < 0) {
@@ -301,7 +315,6 @@ static char *trimwhitespace(char *str)
 
 	return str;
 }
-
 
 static clib_error_t *
 gtp_ila_config (vlib_main_t * vm, unformat_input_t * input)
