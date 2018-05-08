@@ -1,0 +1,27 @@
+create host-interface name ens5
+set interface ip6 table host-ens5 1
+set interface ip address host-ens5 %ens5-ip%/64
+set interface state host-ens5 up
+create host-interface name ens6
+set interface ip6 table host-ens6 2
+set interface ip address host-ens6 %ens6-ip%/64
+set interface state host-ens6 up
+tap connect vpptap
+tap connect vpptap1
+set int ip address tapcli-0 192.168.1.1/24
+set int state tapcli-0 up
+set int ip address tapcli-1 2222::1/64
+set int ip address tapcli-1 2222::2/64
+set int ip address tapcli-1 2222::3/64
+set int ip address tapcli-1 2222::4/64
+set int ip address tapcli-1 2222::5/64
+set int state tapcli-1 up
+ip route add 0::0/0 via 2222::10
+ip route add 0::0/0 table 1 via %default-router% host-ens5
+ip route add 0::0/0 table 2 via %default-router% host-ens6
+gtp-up nwi create label epc
+gtp-up nwi set gtpu address label epc %ens5-ip% teid 0x80000000/2
+gtp-up nwi set interface type label epc access interface host-ens5
+gtp-up nwi set interface type label epc cp interface tapcli-0
+gtp-up nwi create label sgi
+gtp-up nwi set interface type label sgi sgi interface host-ens6

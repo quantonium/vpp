@@ -12,11 +12,22 @@ ARGS="-c $base/startup.conf"
 USAGE="Usage: run.sh [ debug ]
        debug:	executes vpp under gdb"
 
-if [ -z "$1" ]; then
-    $APP $ARGS
-elif [ "$1" == "debug" ]; then
-     GDB_EX="-ex 'set print pretty on' "
-     gdb $GDB_EX --args $APP $ARGS
-else
-	echo "$USAGE"
+if [ "$#" -gt 1 ]; then
+	echo "Usage: run.sh [ <startup_conf> ]"
+	exit 1
 fi
+
+if [ "$#" -eq 1 ]; then
+	ARGS="-c $base/$1"
+fi
+
+$APP $ARGS
+
+#if [ -z "$1" ]; then
+#    $APP $ARGS
+#elif [ "$1" == "debug" ]; then
+#     GDB_EX="-ex 'set print pretty on' "
+#     gdb $GDB_EX --args $APP $ARGS
+#else
+#	echo "$USAGE"
+#fi

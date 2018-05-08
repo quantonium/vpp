@@ -1,0 +1,33 @@
+unix {
+  nodaemon
+  log /tmp/vpp.log
+  full-coredump
+  gid vpp
+  interactive
+  cli-listen localhost:5002
+  exec init.conf.test
+}
+
+gtpila {
+  loc_id 121
+  db_parms { host=%db-host%,port=6380 }
+  test_addr 2222::1
+  test_addr 2222::2
+  test_addr 2222::3
+  test_addr 2222::4
+  test_addr 2222::5
+}
+
+api-trace {
+  on
+}
+
+api-segment {
+  gid vpp
+}
+
+plugins {
+    path ./build-root/install-vpp_debug-native/vpp/lib64/vpp_plugins/
+    plugin dpdk_plugin.so { disable }
+    plugin gtpu_plugin.so { disable }
+}

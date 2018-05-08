@@ -1,0 +1,18 @@
+#!/bin/sh
+
+# Script to make vpp configuration for ILA/vpp test
+
+if [ "$#" -ne 4 ]; then
+        echo "Usage: make_test_conf <ens5-ip> <ens6-ip> <default-router> <db-host>"
+        exit 1
+fi
+
+ens5_ip=$1
+ens6_ip=$2
+default_router=$3
+db_host=$4
+
+sed "s/%ens5-ip%/$ens5_ip/g; s/%ens6-ip%/$ens6_ip/g; s/%default-router%/$default_router/g" init.conf.test_template > ../init.conf.test
+
+sed "s/%db-host%/$db_host/g" start.conf.test_template > ../start.conf.test
+

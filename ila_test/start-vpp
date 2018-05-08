@@ -1,0 +1,5 @@
+# Start cpp with test coniguration
+
+cd /home/tom2/quantonium/gw/vpp
+
+./run.sh start.conf.test
