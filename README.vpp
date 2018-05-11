@@ -38,6 +38,15 @@ To build VPP code:
 
 Note that 'make install-dep' should only be needed to be done once.
 
+ILA+VPP quick test
+==================
+
+The VPP+ILA perfroms basic functionality test of VPP and ILA without
+requiring GTP tunnels. See README.vpp_test. It is recommended to bring
+this test up before the whole GTP stack.
+
+See https://raw.githubusercontent.com/quantonium/ila/master/src/ila/test/README.vpp_test
+
 Running
 =======
 
